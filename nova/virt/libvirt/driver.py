@@ -3112,7 +3112,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.vcpus = flavor.vcpus
         guest.cpuset = CONF.vcpu_pin_set
 
-        quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
+        quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota', 'mem_hugepages', 'mem_nosharepages', 'mem_locked']
         for key, value in flavor.extra_specs.iteritems():
             scope = key.split(':')
             if len(scope) > 1 and scope[0] == 'quota':

@@ -774,6 +774,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             **kwargs)
 
         self.net_type = None
+        self.vhostsock = None
+        self.vhostsock_mode = None
         self.target_dev = None
         self.model = None
         self.mac_addr = None
@@ -809,6 +811,9 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         elif self.net_type == "direct":
             dev.append(etree.Element("source", dev=self.source_dev,
                                      mode=self.source_mode))
+        elif self.net_type == "vhostuser":
+            dev.append(etree.Element("socket", path=self.vhostsock,
+                                     mode=self.vhostsock_mode))
         else:
             dev.append(etree.Element("source", bridge=self.source_dev))
 
@@ -1136,6 +1141,9 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.cpu_shares = None
         self.cpu_quota = None
         self.cpu_period = None
+        self.mem_hugepages = None
+        self.mem_nosharepages = None
+        self.mem_locked = None
         self.acpi = False
         self.apic = False
         self.clock = None
@@ -1209,6 +1217,17 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         if len(cputune) > 0:
             root.append(cputune)
 
+    def _format_memoryBacking(self, root):
+        memoryBacking = etree.Element("memoryBacking")
+        if self.mem_hugepages is not None:
+            memoryBacking.append(etree.Element("hugepages"))
+        if self.mem_nosharepages is not None:
+            memoryBacking.append(etree.Element("nosharepages"))
+        if self.mem_locked is not None:
+            memoryBacking.append(etree.Element("locked"))
+        if len(memoryBacking) > 0:
+            root.append(memoryBacking)
+
     def _format_devices(self, root):
         if len(self.devices) == 0:
             return
@@ -1230,6 +1249,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self._format_os(root)
         self._format_features(root)
         self._format_cputune(root)
+        self._format_memoryBacking(root)
 
         if self.clock is not None:
             root.append(self.clock.format_dom())

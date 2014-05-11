@@ -39,6 +39,12 @@ libvirt_vif_opts = [
                 help='Use virtio for bridge interfaces with KVM/QEMU',
                 deprecated_group='DEFAULT',
                 deprecated_name='libvirt_use_virtio_for_bridges'),
+    cfg.StrOpt('libvirt_vhostuser_socket_dir',
+               default='/var/snabbswitch/vhostuser',
+               help='directory containing vhostuser sockets'),
+    cfg.StrOpt('libvirt_vhostuser_socket_mode',
+               default='server',
+               help='vhostuser socket connection mode'),
 ]
 
 CONF = cfg.CONF
@@ -340,6 +346,17 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
+    def get_config_snabbswitch(self, instance, vif, image_meta,
+                               inst_type):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance, vif,
+                                      image_meta, inst_type)
+        designer.set_vif_host_backend_vhostuser_config(conf,
+            CONF.libvirt_vhostuser_socket_dir + "/" + vif['id'] + ".socket",
+            CONF.libvirt_vhostuser_socket_mode)
+
+        return conf
+
     def get_config(self, instance, vif, image_meta, inst_type):
         vif_type = vif['type']
 
@@ -392,6 +409,11 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                            vif,
                                            image_meta,
                                            inst_type)
+        elif vif_type == network_model.VIF_TYPE_SNABBSWITCH:
+            return self.get_config_snabbswitch(instance,
+                                               vif,
+                                               image_meta,
+                                               inst_type)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -596,6 +618,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while plugging vif"), instance=instance)
 
+    def plug_snabbswitch(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
     def plug(self, instance, vif):
         vif_type = vif['type']
 
@@ -624,6 +650,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.plug_mlnx_direct(instance, vif)
         elif vif_type == network_model.VIF_TYPE_MIDONET:
             self.plug_midonet(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_SNABBSWITCH:
+            self.plug_snabbswitch(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -778,6 +806,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
+    def unplug_snabbswitch(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
     def unplug(self, instance, vif):
         vif_type = vif['type']
 
@@ -806,6 +838,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.unplug_mlnx_direct(instance, vif)
         elif vif_type == network_model.VIF_TYPE_MIDONET:
             self.unplug_midonet(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_SNABBSWITCH:
+            self.unplug_snabbswitch(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
